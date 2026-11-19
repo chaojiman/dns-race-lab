@@ -1,0 +1,6 @@
+# Sample name list for `dnsrace probe`.
+# One name per line; blank lines and '#' comments are ignored.
+example.com
+www.example.com
+cdn.example.com
+ads.example.com
