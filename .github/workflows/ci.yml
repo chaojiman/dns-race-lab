@@ -1,0 +1,58 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install --upgrade pip
+      - run: pip install .
+      - name: unit tests (offline)
+        run: python -m unittest discover -s tests -t . -v
+      - name: cli self-check
+        run: dnsrace selfcheck
+      - name: cli race against the mock server
+        run: |
+          dnsrace mock --zone examples/zone.json --port 5353 &
+          MOCK_PID=$!
+          trap 'kill $MOCK_PID' EXIT
+          sleep 1
+          dnsrace race --qname www.example.com \
+            --resolver udp://127.0.0.1:5353 \
+            --resolver tcp://127.0.0.1:5353 \
+            --timeout 2 --json > race.json
+          python -c "import json;p=json.load(open('race.json'));assert p['consistency']['verdict']=='agree',p['consistency'];assert p['winner'],p;print('race ok:',p['winner'])"
+
+  docker:
+    name: docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: dns-race-lab:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: self-check inside the image
+        run: docker run --rm dns-race-lab:ci selfcheck
