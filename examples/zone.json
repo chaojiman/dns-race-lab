@@ -1,0 +1,8 @@
+{
+  "example.com": { "A": ["192.0.2.10"], "AAAA": ["2001:db8::10"] },
+  "www.example.com": { "CNAME": "example.com" },
+  "cdn.example.com": { "A": ["192.0.2.20", "192.0.2.21"] },
+  "ads.example.com": { "A": ["10.0.0.66"] },
+  "slow.example.com": { "A": ["192.0.2.40"] },
+  "big.example.com": { "A": ["192.0.2.50"] }
+}
